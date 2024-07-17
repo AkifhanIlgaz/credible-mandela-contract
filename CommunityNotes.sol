@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+interface ITrustDrops {
+    function reputation(address) external view returns (uint256);
+}
+
 contract CommunityNotes {
     struct CommunityNote {
         uint256 id;
@@ -16,15 +20,18 @@ contract CommunityNotes {
     mapping(address => uint256[]) notesOfUser;
     address[] public moderators;
 
+    address public trustDropsContract =
+        0x7Fa2Addd4d59366AA98F66861d370C174DC00B46;
+
     uint256 public publishPrice = 10 ether;
+    uint256 public minCredToPublish = 1000;
     address public owner;
 
-    uint256 public notesPerPage;
+    uint256 public notesPerPage = 5;
     uint256 private noteIdCounter;
 
-    constructor(uint256 _notesPerPage) {
+    constructor() {
         owner = msg.sender;
-        notesPerPage = _notesPerPage;
     }
 
     modifier onlyOwner() {
@@ -49,6 +56,14 @@ contract CommunityNotes {
 
     function setPublishPrice(uint256 _newPrice) public onlyOwner {
         publishPrice = _newPrice;
+    }
+
+    function setNotesPerPage(uint256 _notesPerPage) public onlyOwner {
+        notesPerPage = _notesPerPage;
+    }
+
+    function setMinCredToPublish(uint256 _minCredToPublish) public onlyOwner {
+        minCredToPublish = _minCredToPublish;
     }
 
     function addModerator(address _newModerator) public onlyOwner {
@@ -76,12 +91,15 @@ contract CommunityNotes {
         require(found, "Address is not a moderator");
     }
 
-    // ! Min 5 CRED
     function publishNote(
         string memory _title,
         string memory _content,
         string memory headImage
     ) public payable {
+        require(
+            getReputationOfUser(msg.sender) >= minCredToPublish,
+            "Insufficient reputation"
+        );
         require(msg.value >= publishPrice, "Insufficient payment for ad");
         require(
             bytes(_title).length <= 100,
@@ -182,6 +200,12 @@ contract CommunityNotes {
 
         (bool sent, ) = author.call{value: msg.value}("");
         require(sent, "Failed to send tip to the author");
+    }
+
+    function getReputationOfUser(address _user) public view returns (uint256) {
+        ITrustDrops trustDrops = ITrustDrops(trustDropsContract);
+
+        return trustDrops.reputation(_user);
     }
 
     function min(uint256 a, uint256 b) private pure returns (uint256) {
