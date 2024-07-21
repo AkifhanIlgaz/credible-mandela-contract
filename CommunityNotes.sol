@@ -12,23 +12,23 @@ contract CommunityNotes {
         uint256 totalTipsReceived;
         string title;
         string content;
-        string headImage;
+        string coverImage;
         uint256 createdAt;
     }
 
     mapping(uint256 => CommunityNote) public notes;
-    mapping(address => uint256[]) notesOfUser;
+    mapping(address => uint256[]) public notesOfUser;
     address[] public moderators;
 
     address public trustDropsContract =
         0x7Fa2Addd4d59366AA98F66861d370C174DC00B46;
 
-    uint256 public publishPrice = 10 ether;
+    uint256 public publishPrice = 0;
     uint256 public minCredToPublish = 1000;
     address public owner;
 
     uint256 public notesPerPage = 5;
-    uint256 private noteIdCounter;
+    uint256 public noteIdCounter;
 
     constructor() {
         owner = msg.sender;
@@ -94,7 +94,7 @@ contract CommunityNotes {
     function publishNote(
         string memory _title,
         string memory _content,
-        string memory headImage
+        string memory _coverImage
     ) public payable {
         require(
             getReputationOfUser(msg.sender) >= minCredToPublish,
@@ -120,7 +120,7 @@ contract CommunityNotes {
             content: _content,
             createdAt: block.timestamp,
             totalTipsReceived: 0,
-            headImage: headImage
+            coverImage: _coverImage
         });
 
         notesOfUser[msg.sender].push(noteId);
@@ -141,6 +141,16 @@ contract CommunityNotes {
 
         for (uint256 i = 0; i < resultLength; i++) {
             result[i] = notes[startIndex + i];
+        }
+
+        return result;
+    }
+
+    function getAllNotes() public view returns (CommunityNote[] memory) {
+        CommunityNote[] memory result = new CommunityNote[](noteIdCounter + 1);
+
+        for (uint256 i = 0; i < noteIdCounter; i++) {
+            result[i] = notes[i];
         }
 
         return result;
